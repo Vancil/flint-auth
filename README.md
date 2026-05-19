@@ -14,15 +14,12 @@ composer require vancil/flint-auth
 
 ## Setup
 
-Register the middleware aliases in your application. Add the following to your `Application` subclass or directly in `public/index.php` after boot:
+Add `FlintAuth` to the `packages` array in `config/app.php` — no other registration needed:
 
 ```php
-use Vancil\FlintAuth\FlintAuth;
-
-$app = new Flint\Application(BASE_PATH);
-$app->boot();
-
-FlintAuth::register($app->make(Flint\Router::class));
+'packages' => [
+    \Vancil\FlintAuth\FlintAuth::class,
+],
 ```
 
 Add the required config to your `.env`:
