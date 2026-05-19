@@ -1,0 +1,19 @@
+{
+    "name": "vancil/flint-auth",
+    "description": "Authentication middleware for the Flint framework — Bearer, JWT, and API key strategies",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "vancil/flint": "*",
+        "firebase/php-jwt": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vancil\\FlintAuth\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
