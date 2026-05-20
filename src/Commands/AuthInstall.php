@@ -70,7 +70,8 @@ class AuthInstall extends Command
         $this->line('  \033[33mNext steps:\033[0m');
         $this->line('  1. Add to routes/web.php:');
         $this->line('');
-        $this->line('     $router->post(\'/auth/login\', [AuthController::class, \'login\']);');
+        $this->line('     $router->post(\'/auth/login\',   [AuthController::class, \'login\']);');
+        $this->line('     $router->post(\'/auth/refresh\', [AuthController::class, \'refresh\'], [\'auth.refresh\']);');
         $this->line('');
         $this->line('     $router->group([\'middleware\' => [\'auth.jwt\']], function ($router) {');
         $this->line('         $router->get(\'/profile\', [ProfileController::class, \'show\']);');
@@ -197,6 +198,7 @@ namespace App\Controllers;
 use Flint\Request;
 use Flint\Response;
 use Firebase\JWT\JWT;
+use Vancil\FlintAuth\Auth;
 
 class AuthController
 {
@@ -213,14 +215,61 @@ class AuthController
         //     return Response::json(['error' => 'Invalid credentials.'], 401);
         // }
 
-        $token = JWT::encode([
+        $secret    = config('auth.jwt_secret');
+        $algorithm = config('auth.jwt_algorithm');
+        $now       = time();
+
+        $accessToken = JWT::encode([
             'sub'   => 1, // $user['id']
             'email' => $data['email'],
-            'iat'   => time(),
-            'exp'   => time() + 3600,
-        ], config('auth.jwt_secret'), config('auth.jwt_algorithm'));
+            'type'  => 'access',
+            'iat'   => $now,
+            'exp'   => $now + 3600,
+        ], $secret, $algorithm);
 
-        return Response::json(['token' => $token]);
+        $refreshToken = JWT::encode([
+            'sub'  => 1, // $user['id']
+            'type' => 'refresh',
+            'iat'  => $now,
+            'exp'  => $now + (86400 * 30),
+        ], $secret, $algorithm);
+
+        return Response::json([
+            'access_token'  => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in'    => 3600,
+            'token_type'    => 'Bearer',
+        ]);
+    }
+
+    public function refresh(Request $request): Response
+    {
+        $claims = Auth::user();
+
+        $secret    = config('auth.jwt_secret');
+        $algorithm = config('auth.jwt_algorithm');
+        $now       = time();
+
+        $accessToken = JWT::encode([
+            'sub'  => $claims->sub,
+            'type' => 'access',
+            'iat'  => $now,
+            'exp'  => $now + 3600,
+        ], $secret, $algorithm);
+
+        $refreshToken = JWT::encode([
+            'sub'  => $claims->sub,
+            'type' => 'refresh',
+            'iat'  => $now,
+            'exp'  => $now + (86400 * 30),
+        ], $secret, $algorithm);
+
+        return Response::json([
+            'access_token'  => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in'    => 3600,
+            'token_type'    => 'Bearer',
+        ]);
     }
 }
 PHP;

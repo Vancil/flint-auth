@@ -10,11 +10,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Vancil\FlintAuth\Auth;
 
-/**
- * Validates a signed JWT from the Authorization: Bearer header.
- * Decoded claims are available via Auth::user() after authentication.
- */
-class JwtMiddleware
+class RefreshMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
@@ -37,7 +33,7 @@ class JwtMiddleware
             return Response::json(['error' => 'Unauthorized.'], 401);
         }
 
-        if (($payload->type ?? null) === 'refresh') {
+        if (($payload->type ?? null) !== 'refresh') {
             return Response::json(['error' => 'Unauthorized.'], 401);
         }
 

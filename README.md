@@ -133,20 +133,29 @@ Compares the `Authorization: Bearer <token>` header against `APP_SECRET` using a
 
 Validates a signed JWT from the `Authorization: Bearer <token>` header using [`firebase/php-jwt`](https://github.com/firebase/php-jwt). Verifies the signature, expiry, and algorithm. Decoded claims are passed to `Auth::user()`.
 
-Generate a token in your auth controller:
+Access tokens must have `"type": "access"` (or no type claim). Refresh tokens passed to a JWT-protected route are rejected automatically.
+
+### Token Refresh (`auth.refresh`)
+
+Validates a long-lived refresh token and makes its claims available via `Auth::user()`. Use this on your `/auth/refresh` endpoint to issue new tokens without re-authenticating.
 
 ```php
-use Firebase\JWT\JWT;
-
-$token = JWT::encode([
-    'sub'   => $user['id'],
-    'email' => $user['email'],
-    'iat'   => time(),
-    'exp'   => time() + 3600,
-], config('auth.jwt_secret'), config('auth.jwt_algorithm'));
-
-return Response::json(['token' => $token]);
+$router->post('/auth/login',   [AuthController::class, 'login']);
+$router->post('/auth/refresh', [AuthController::class, 'refresh'], ['auth.refresh']);
 ```
+
+`auth:install --jwt` generates a starter `AuthController` with both `login()` and `refresh()` methods. The login response shape:
+
+```json
+{
+  "access_token":  "<short-lived JWT, 1h>",
+  "refresh_token": "<long-lived JWT, 30d>",
+  "expires_in":    3600,
+  "token_type":    "Bearer"
+}
+```
+
+Send the `refresh_token` to `/auth/refresh` with `Authorization: Bearer <refresh_token>` to receive a new token pair.
 
 ### API Key (`auth.apikey`)
 
