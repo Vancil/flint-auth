@@ -6,7 +6,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "repositories": [
-        {"type": "path", "url": "../flint"}
+        {"type": "vcs", "url": "https://github.com/Vancil/flint"}
     ],
     "require": {
         "php": ">=8.1",
