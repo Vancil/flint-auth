@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use Firebase\JWT\JWT;
+use Flint\Database;
 use Flint\Request;
 use Flint\Response;
+use PDO;
 use PHPUnit\Framework\TestCase;
 use Vancil\FlintAuth\Auth;
 use Vancil\FlintAuth\Middleware\RefreshMiddleware;
@@ -21,11 +23,30 @@ class RefreshMiddlewareTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI']    = '/';
         unset($_SERVER['HTTP_AUTHORIZATION']);
+
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $pdo->exec('
+            CREATE TABLE refresh_tokens (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL,
+                jti        TEXT    NOT NULL UNIQUE,
+                expires_at TEXT    NOT NULL,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        ');
+
+        Database::setConnection($pdo);
     }
 
-    public function test_valid_refresh_token_passes_through(): void
+    public function test_valid_refresh_token_with_stored_jti_passes_through(): void
     {
-        $this->setBearer($this->refreshToken());
+        $jti   = 'test-jti-valid';
+        $token = $this->refreshToken(['jti' => $jti]);
+        $this->storeJti($jti);
+        $this->setBearer($token);
 
         $response = $this->dispatch();
 
@@ -34,7 +55,10 @@ class RefreshMiddlewareTest extends TestCase
 
     public function test_sets_auth_user_on_valid_token(): void
     {
-        $this->setBearer($this->refreshToken(['sub' => 42]));
+        $jti   = 'test-jti-claims';
+        $token = $this->refreshToken(['jti' => $jti, 'sub' => 42]);
+        $this->storeJti($jti);
+        $this->setBearer($token);
 
         $this->dispatch();
 
@@ -54,60 +78,86 @@ class RefreshMiddlewareTest extends TestCase
             'sub'  => 1,
             'type' => 'access',
             'iat'  => time(),
-            'exp'  => time() + 3600,
+            'exp'  => time() + 900,
         ], self::SECRET, self::ALGORITHM);
 
         $this->setBearer($token);
 
-        $response = $this->dispatch();
-
-        $this->assertSame(401, $this->responseStatus($response));
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
     }
 
     public function test_token_without_type_is_rejected(): void
     {
         $token = JWT::encode([
             'sub' => 1,
-            'iat' => time(),
+            'jti' => 'some-jti',
             'exp' => time() + 3600,
         ], self::SECRET, self::ALGORITHM);
 
         $this->setBearer($token);
 
-        $response = $this->dispatch();
-
-        $this->assertSame(401, $this->responseStatus($response));
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
     }
 
-    public function test_expired_token_returns_401(): void
+    public function test_token_without_jti_is_rejected(): void
     {
         $token = JWT::encode([
             'sub'  => 1,
             'type' => 'refresh',
-            'iat'  => time() - 7200,
-            'exp'  => time() - 3600,
+            'exp'  => time() + (86400 * 30),
         ], self::SECRET, self::ALGORITHM);
 
         $this->setBearer($token);
 
-        $response = $this->dispatch();
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
+    }
 
-        $this->assertSame(401, $this->responseStatus($response));
+    public function test_unknown_jti_returns_401(): void
+    {
+        $token = $this->refreshToken(['jti' => 'not-in-db']);
+        $this->setBearer($token);
+
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
+    }
+
+    public function test_expired_db_record_returns_401(): void
+    {
+        $jti   = 'test-jti-expired-db';
+        $token = $this->refreshToken(['jti' => $jti]);
+        $this->storeJti($jti, time() - 3600);
+        $this->setBearer($token);
+
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
+    }
+
+    public function test_expired_jwt_returns_401(): void
+    {
+        $jti   = 'test-jti-expired-jwt';
+        $token = JWT::encode([
+            'sub'  => 1,
+            'type' => 'refresh',
+            'jti'  => $jti,
+            'iat'  => time() - 7200,
+            'exp'  => time() - 3600,
+        ], self::SECRET, self::ALGORITHM);
+
+        $this->storeJti($jti);
+        $this->setBearer($token);
+
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
     }
 
     public function test_invalid_signature_returns_401(): void
     {
         $token = JWT::encode(
-            ['sub' => 1, 'type' => 'refresh', 'exp' => time() + 3600],
+            ['sub' => 1, 'type' => 'refresh', 'jti' => 'x', 'exp' => time() + 3600],
             'wrong-secret',
             self::ALGORITHM
         );
 
         $this->setBearer($token);
 
-        $response = $this->dispatch();
-
-        $this->assertSame(401, $this->responseStatus($response));
+        $this->assertSame(401, $this->responseStatus($this->dispatch()));
     }
 
     // Helpers
@@ -117,9 +167,18 @@ class RefreshMiddlewareTest extends TestCase
         return JWT::encode(array_merge([
             'sub'  => 1,
             'type' => 'refresh',
+            'jti'  => 'default-jti',
             'iat'  => time(),
             'exp'  => time() + (86400 * 30),
         ], $extra), self::SECRET, self::ALGORITHM);
+    }
+
+    private function storeJti(string $jti, int $expiresAt = 0): void
+    {
+        $expiresAt = $expiresAt ?: time() + (86400 * 30);
+        Database::connection()->exec(
+            "INSERT INTO refresh_tokens (user_id, jti, expires_at) VALUES (1, '{$jti}', '" . date('Y-m-d H:i:s', $expiresAt) . "')"
+        );
     }
 
     private function dispatch(): Response

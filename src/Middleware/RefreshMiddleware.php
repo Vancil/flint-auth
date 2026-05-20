@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Vancil\FlintAuth\Middleware;
 
 use Closure;
+use Flint\QueryBuilder;
 use Flint\Request;
 use Flint\Response;
 use Firebase\JWT\JWT;
@@ -34,6 +35,24 @@ class RefreshMiddleware
         }
 
         if (($payload->type ?? null) !== 'refresh') {
+            return Response::json(['error' => 'Unauthorized.'], 401);
+        }
+
+        $jti = $payload->jti ?? null;
+
+        if (!$jti) {
+            return Response::json(['error' => 'Unauthorized.'], 401);
+        }
+
+        try {
+            $stored = (new QueryBuilder('refresh_tokens'))
+                ->where('jti', $jti)
+                ->first();
+        } catch (\Throwable) {
+            return Response::json(['error' => 'Unauthorized.'], 401);
+        }
+
+        if (!$stored || strtotime($stored['expires_at']) < time()) {
             return Response::json(['error' => 'Unauthorized.'], 401);
         }
 
