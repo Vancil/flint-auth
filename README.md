@@ -80,7 +80,10 @@ $router->group(['middleware' => ['auth.bearer']], function ($router) {
     $router->get('/admin/stats', [AdminController::class, 'stats']);
 });
 
-// JWT
+// JWT (access token required)
+$router->post('/auth/login',   [AuthController::class, 'login']);
+$router->post('/auth/refresh', [AuthController::class, 'refresh'], ['auth.refresh']);
+
 $router->group(['middleware' => ['auth.jwt']], function ($router) {
     $router->get('/profile', [ProfileController::class, 'show']);
     $router->put('/profile', [ProfileController::class, 'update']);
@@ -119,6 +122,7 @@ class ProfileController
 |----------|------------------------|
 | `auth.bearer` | The bearer token string |
 | `auth.jwt` | `stdClass` of decoded JWT claims |
+| `auth.refresh` | `stdClass` of decoded refresh token claims |
 | `auth.apikey` | The matched API key string |
 
 ---
