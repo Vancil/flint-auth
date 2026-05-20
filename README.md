@@ -12,7 +12,31 @@ composer require vancil/flint-auth
 
 ---
 
-## Setup
+## Quick Start
+
+Run the interactive installer to scaffold everything automatically:
+
+```bash
+php flint auth:install
+```
+
+Or pass a strategy flag to skip the prompt:
+
+```bash
+php flint auth:install --jwt
+php flint auth:install --bearer
+php flint auth:install --apikey
+```
+
+The installer will:
+- Write the required secrets to your `.env`
+- Create `config/auth.php` if it doesn't exist
+- Register `FlintAuth` in `config/app.php` if it isn't already
+- Generate a starter `AuthController` (JWT only)
+
+---
+
+## Manual Setup
 
 Add `FlintAuth` to the `packages` array in `config/app.php` — no other registration needed:
 
