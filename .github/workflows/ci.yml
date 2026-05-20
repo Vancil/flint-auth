@@ -25,10 +25,11 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
 
+      - name: Authenticate Composer with GitHub
+        run: composer config -g github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
-        env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
 
       - name: Run tests
         run: vendor/bin/phpunit
