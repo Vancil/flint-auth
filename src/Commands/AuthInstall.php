@@ -155,8 +155,9 @@ use Flint\Model;
 class User extends Model
 {
     protected string $table    = 'users';
-    protected array  $fillable = ['name', 'email', 'password'];
+    protected array  $fillable = ['name', 'email', 'password', 'is_active'];
     protected array  $hidden   = ['password'];
+    protected array  $casts    = ['is_active' => 'bool'];
 }
 PHP;
 
