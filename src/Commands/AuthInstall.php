@@ -9,53 +9,14 @@ use Flint\Application;
 class AuthInstall extends Command
 {
     public function signature(): string { return 'auth:install'; }
-    public function description(): string { return 'Install and configure authentication for your Flint API'; }
+    public function description(): string { return 'Install and configure JWT authentication for your Flint API'; }
 
     public function handle(array $args): void
     {
-        $strategy = $this->resolveStrategy($args);
-
-        if (!$strategy) {
-            $this->line('');
-            $this->line('Which authentication strategy would you like to install?');
-            $this->line('');
-            $this->line('  \033[32m1)\033[0m JWT        — Signed tokens, ideal for SPAs and mobile apps');
-            $this->line('  \033[32m2)\033[0m Bearer     — Simple secret token, ideal for internal services');
-            $this->line('  \033[32m3)\033[0m API Key    — Key-based access, ideal for third-party integrations');
-            $this->line('');
-            $input = trim(readline('  Choice [1/2/3]: '));
-            $strategy = match ($input) {
-                '1', 'jwt'    => 'jwt',
-                '2', 'bearer' => 'bearer',
-                '3', 'apikey' => 'apikey',
-                default       => null,
-            };
-        }
-
-        if (!$strategy) {
-            $this->error('Invalid strategy. Use --jwt, --bearer, or --apikey.');
-            exit(1);
-        }
-
         $this->line('');
         $this->ensurePackageRegistered();
         $this->ensureAuthConfig();
-
-        match ($strategy) {
-            'jwt'    => $this->installJwt(),
-            'bearer' => $this->installBearer(),
-            'apikey' => $this->installApiKey(),
-        };
-    }
-
-    private function resolveStrategy(array $args): ?string
-    {
-        foreach ($args as $arg) {
-            if ($arg === '--jwt')    return 'jwt';
-            if ($arg === '--bearer') return 'bearer';
-            if ($arg === '--apikey') return 'apikey';
-        }
-        return null;
+        $this->installJwt();
     }
 
     private function installJwt(): void
@@ -63,7 +24,7 @@ class AuthInstall extends Command
         $secret = bin2hex(random_bytes(32));
         $this->writeEnv('JWT_SECRET', $secret);
         $this->writeEnv('JWT_ALGORITHM', 'HS256');
-        $this->generateAuthController('jwt');
+        $this->generateAuthController();
 
         $this->info('JWT authentication installed.');
         $this->line('');
@@ -80,62 +41,7 @@ class AuthInstall extends Command
         $this->line('  2. In your controller, access the decoded token via:');
         $this->line('     $claims = \Vancil\FlintAuth\Auth::user();');
         $this->line('');
-        $this->line("  JWT_SECRET has been written to your .env.");
-    }
-
-    private function installBearer(): void
-    {
-        $envPath = $this->app->basePath . '/.env';
-        $secret  = '';
-
-        if (file_exists($envPath)) {
-            preg_match('/^APP_SECRET=(.+)$/m', file_get_contents($envPath), $matches);
-            $secret = trim($matches[1] ?? '');
-        }
-
-        if (!$secret || $secret === 'change-me-in-production') {
-            $secret = bin2hex(random_bytes(32));
-            $this->writeEnv('APP_SECRET', $secret);
-            $this->info('Generated new APP_SECRET and written to .env.');
-        } else {
-            $this->info('Using existing APP_SECRET from .env.');
-        }
-
-        $this->line('');
-        $this->line('  \033[33mNext steps:\033[0m');
-        $this->line('  1. Add to routes/web.php:');
-        $this->line('');
-        $this->line('     $router->group([\'middleware\' => [\'auth.bearer\']], function ($router) {');
-        $this->line('         $router->get(\'/profile\', [ProfileController::class, \'show\']);');
-        $this->line('     });');
-        $this->line('');
-        $this->line('  2. Clients must send: Authorization: Bearer <APP_SECRET>');
-    }
-
-    private function installApiKey(): void
-    {
-        $keys = [
-            'key_' . bin2hex(random_bytes(16)),
-            'key_' . bin2hex(random_bytes(16)),
-        ];
-
-        $this->writeEnv('API_KEYS', implode(',', $keys));
-        $this->writeEnv('API_KEY_HEADER', 'X-API-Key');
-
-        $this->info('API key authentication installed.');
-        $this->line('');
-        $this->line('  \033[33mNext steps:\033[0m');
-        $this->line('  1. Add to routes/web.php:');
-        $this->line('');
-        $this->line('     $router->group([\'middleware\' => [\'auth.apikey\']], function ($router) {');
-        $this->line('         $router->get(\'/webhooks\', [WebhookController::class, \'index\']);');
-        $this->line('     });');
-        $this->line('');
-        $this->line('  2. Clients must send: X-API-Key: <key>');
-        $this->line('     Or append: ?api_key=<key>');
-        $this->line('');
-        $this->line('  Two sample keys have been written to API_KEYS in your .env.');
-        $this->line('  Add or remove keys from that list at any time.');
+        $this->line('  JWT_SECRET has been written to your .env.');
     }
 
     private function ensurePackageRegistered(): void
@@ -169,10 +75,8 @@ class AuthInstall extends Command
 <?php
 
 return [
-    'jwt_secret'     => env('JWT_SECRET', ''),
-    'jwt_algorithm'  => env('JWT_ALGORITHM', 'HS256'),
-    'api_key_header' => env('API_KEY_HEADER', 'X-API-Key'),
-    'api_keys'       => array_filter(explode(',', env('API_KEYS', ''))),
+    'jwt_secret'    => env('JWT_SECRET', ''),
+    'jwt_algorithm' => env('JWT_ALGORITHM', 'HS256'),
 ];
 PHP;
 
@@ -180,7 +84,7 @@ PHP;
         $this->info('Created config/auth.php.');
     }
 
-    private function generateAuthController(string $strategy): void
+    private function generateAuthController(): void
     {
         $path = $this->app->basePath . '/app/Controllers/AuthController.php';
 
