@@ -27,6 +27,8 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
 
       - name: Run tests
         run: vendor/bin/phpunit
