@@ -34,8 +34,8 @@ class JwtMiddleware
         try {
             $payload = JWT::decode($token, new Key($secret, $algorithm));
             Auth::set($payload);
-        } catch (\Throwable $e) {
-            return Response::json(['error' => 'Unauthorized.', 'detail' => $e->getMessage()], 401);
+        } catch (\Throwable) {
+            return Response::json(['error' => 'Unauthorized.'], 401);
         }
 
         return $next($request);
