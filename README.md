@@ -1,6 +1,6 @@
 # flint-auth
 
-UI scaffold package for the [Flint framework](https://github.com/Vancil/flint). Scaffolds session-based authentication with your choice of Bootstrap (server-rendered), Vue, or React frontend preset — modelled after [`laravel/ui`](https://github.com/laravel/ui).
+UI scaffold package for the [Flint framework](https://github.com/Vancil/flint). Scaffolds session-based authentication with your choice of Bootstrap (server-rendered), Vue, or React frontend preset.
 
 > **v2.0 — breaking change.** The previous JWT API auth package has been replaced entirely. See the [migration guide](#migrating-from-v1) if you are upgrading.
 
