@@ -1,6 +1,6 @@
 {
     "name": "vancil/flint-auth",
-    "description": "JWT authentication middleware for the Flint framework",
+    "description": "UI scaffold for Flint — session-based auth with Bootstrap, Vue, and React presets",
     "type": "library",
     "license": "MIT",
     "minimum-stability": "dev",
@@ -10,8 +10,7 @@
     ],
     "require": {
         "php": ">=8.1",
-        "vancil/flint": "*",
-        "firebase/php-jwt": "^6.0"
+        "vancil/flint": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0"
@@ -31,9 +30,5 @@
     },
     "config": {
         "optimize-autoloader": true
-    },
-    "audit": {
-        "ignore": ["PKSA-y2cr-5h3j-g3ys"],
-        "block-insecure": false
     }
 }
