@@ -4,7 +4,7 @@
   <a href="https://github.com/Vancil/flint-auth/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Vancil/flint-auth/ci.yml?label=tests" alt="Tests"></a>
   <a href="https://packagist.org/packages/vancil/flint-auth"><img src="https://img.shields.io/packagist/dt/vancil/flint-auth" alt="Total Downloads"></a>
   <a href="https://packagist.org/packages/vancil/flint-auth"><img src="https://img.shields.io/packagist/v/vancil/flint-auth" alt="Latest Version on Packagist"></a>
-  <a href="https://packagist.org/packages/vancil/flint-auth"><img src="https://img.shields.io/packagist/l/vancil/flint-auth" alt="License"></a>
+  <a href="https://github.com/Vancil/flint-auth/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
 </p>
 
 UI scaffold package for the [Flint framework](https://github.com/Vancil/flint). Scaffolds session-based authentication with your choice of Bootstrap (server-rendered), Vue, or React frontend preset.
