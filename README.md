@@ -1,6 +1,8 @@
 # flint-auth
 
-JWT authentication middleware for the [Flint framework](https://github.com/Vancil/flint). Provides register, login, refresh, and logout out of the box using [`firebase/php-jwt`](https://github.com/firebase/php-jwt). Refresh tokens are stored in the database for true revocation.
+UI scaffold package for the [Flint framework](https://github.com/Vancil/flint). Scaffolds session-based authentication with your choice of Bootstrap (server-rendered), Vue, or React frontend preset — modelled after [`laravel/ui`](https://github.com/laravel/ui).
+
+> **v2.0 — breaking change.** The previous JWT API auth package has been replaced entirely. See the [migration guide](#migrating-from-v1) if you are upgrading.
 
 ---
 
@@ -10,35 +12,7 @@ JWT authentication middleware for the [Flint framework](https://github.com/Vanci
 composer require vancil/flint-auth
 ```
 
----
-
-## Quick Start
-
-Run the installer to scaffold everything automatically:
-
-```bash
-php flint auth:install
-```
-
-The installer will:
-- Generate a `JWT_SECRET` and write it to your `.env`
-- Create `config/auth.php`
-- Register `FlintAuth` in `config/app.php`
-- Publish migrations for `users` and `refresh_tokens` tables
-- Generate `app/Models/User.php`
-- Generate `app/Controllers/AuthController.php` with all four auth methods
-
-Then run your migrations:
-
-```bash
-php flint migrate
-```
-
----
-
-## Manual Setup
-
-Add `FlintAuth` to the `packages` array in `config/app.php`:
+Register the package in `config/app.php`:
 
 ```php
 'packages' => [
@@ -46,118 +20,205 @@ Add `FlintAuth` to the `packages` array in `config/app.php`:
 ],
 ```
 
-Add to your `.env`:
+---
 
-```env
-JWT_SECRET=your-secret-key
-JWT_ALGORITHM=HS256
+## Quick Start
+
+Pick a frontend preset and add `--auth` to scaffold all authentication pages:
+
+```bash
+# Bootstrap 5 — server-rendered Ember templates
+php flint ui bootstrap --auth
+
+# Vue 3 + Vite — SPA with JSON API backend
+php flint ui vue --auth
+
+# React 18 + Vite — SPA with JSON API backend
+php flint ui react --auth
 ```
 
-Add `config/auth.php`:
+Then run your migrations and start the server:
+
+```bash
+php flint migrate
+php -S localhost:8000 -t public
+```
+
+Visit `http://localhost:8000/register` to get started.
+
+For Vue/React presets, install JS dependencies and start the dev server:
+
+```bash
+npm install && npm run dev
+```
+
+---
+
+## What Gets Scaffolded
+
+Running `php flint ui <preset> --auth` publishes the following into your application:
+
+**Migrations** (`database/migrations/`)
+- `create_users_table` — id, name, email, password, remember_token, email_verified_at, timestamps
+- `create_password_reset_tokens_table` — email, token, created_at
+- `create_email_verifications_table` — email, token, created_at
+
+**Models** (`app/Models/`)
+- `User.php`
+- `PasswordResetToken.php`
+- `EmailVerification.php`
+
+**Auth pages**
+| Route | Description |
+|-------|-------------|
+| `GET /register` | Registration form |
+| `POST /register` | Create account + send verification email |
+| `GET /login` | Login form |
+| `POST /login` | Authenticate + start session |
+| `POST /logout` | End session |
+| `GET /forgot-password` | Request a password reset link |
+| `POST /forgot-password` | Send reset email |
+| `GET /reset-password/{token}` | Password reset form |
+| `POST /reset-password` | Apply new password |
+| `GET /email/verify` | "Please verify your email" notice |
+| `GET /email/verify/{token}` | Verify email address |
+| `POST /email/verify/resend` | Resend verification email |
+| `GET /dashboard` | Authenticated dashboard (protected by `auth` middleware) |
+
+**Config** — `config/auth.php` and session/mail defaults written to `.env`.
+
+---
+
+## Presets
+
+### Bootstrap
+
+Server-rendered HTML using Flint's **Ember** template engine (`.ember` files). Bootstrap 5 is loaded from CDN — no build step required.
+
+Controllers are published to `app/Controllers/Auth/` and use `Response::view()`, `Response::back()`, and session flash for form repopulation.
+
+### Vue
+
+Vite + Vue 3 SPA. Auth pages are Vue single-file components that call the JSON API endpoints (`/api/auth/*`) using `fetch` with `credentials: 'include'` so the session cookie is sent automatically.
+
+```
+resources/js/
+  main.js
+  router/index.js
+  views/LoginView.vue
+  views/RegisterView.vue
+  views/ForgotPasswordView.vue
+  views/ResetPasswordView.vue
+  views/DashboardView.vue
+```
+
+### React
+
+Vite + React 18 SPA. Same JSON API approach as the Vue preset.
+
+```
+resources/js/
+  main.jsx
+  router/AppRouter.jsx
+  pages/LoginPage.jsx
+  pages/RegisterPage.jsx
+  pages/ForgotPasswordPage.jsx
+  pages/ResetPasswordPage.jsx
+  pages/DashboardPage.jsx
+```
+
+---
+
+## Auth in Controllers
+
+The `Flint\Auth\Auth` class is available via constructor injection anywhere in your application:
 
 ```php
-return [
-    'jwt_secret'    => env('JWT_SECRET', ''),
-    'jwt_algorithm' => env('JWT_ALGORITHM', 'HS256'),
-];
-```
+use Flint\Auth\Auth;
+use Flint\Request;
+use Flint\Response;
 
----
-
-## Routes
-
-Wire up the four auth endpoints and protect your routes:
-
-```php
-$router->post('/auth/register', [AuthController::class, 'register']);
-$router->post('/auth/login',    [AuthController::class, 'login']);
-$router->post('/auth/refresh',  [AuthController::class, 'refresh'], ['auth.refresh']);
-$router->post('/auth/logout',   [AuthController::class, 'logout'],  ['auth.refresh']);
-
-$router->group(['middleware' => ['auth.jwt']], function ($router) {
-    $router->get('/profile', [ProfileController::class, 'show']);
-    $router->put('/profile', [ProfileController::class, 'update']);
-});
-```
-
----
-
-## Middleware
-
-| Alias | Purpose |
-|-------|---------|
-| `auth.jwt` | Validates a short-lived access token. Rejects refresh tokens. |
-| `auth.refresh` | Validates a long-lived refresh token against the database. Use on refresh and logout routes. |
-
----
-
-## Token Flow
-
-**Register / Login** — returns a token pair:
-
-```json
+class DashboardController
 {
-  "access_token":  "<JWT, 15 min>",
-  "refresh_token": "<JWT, 30 days>",
-  "expires_in":    900,
-  "token_type":    "Bearer"
-}
-```
+    public function __construct(private readonly Auth $auth) {}
 
-**Authenticated requests** — send the access token:
-
-```
-Authorization: Bearer <access_token>
-```
-
-**Refresh** — when the access token expires, send the refresh token to `/auth/refresh`:
-
-```
-Authorization: Bearer <refresh_token>
-```
-
-A new token pair is returned. The old refresh token is revoked and replaced.
-
-**Logout** — send the refresh token to `/auth/logout`. The token is immediately revoked in the database.
-
-```
-Authorization: Bearer <refresh_token>
-```
-
----
-
-## Accessing the Authenticated User
-
-After a successful request, the decoded JWT claims are available anywhere via `Auth::user()`:
-
-```php
-use Vancil\FlintAuth\Auth;
-
-class ProfileController
-{
-    public function show(): Response
+    public function index(Request $request): Response
     {
-        $claims = Auth::user();
+        $user = $this->auth->user();
 
-        return Response::json([
-            'sub'   => $claims->sub,
-        ]);
+        return Response::view('dashboard', ['user' => $user]);
     }
 }
 ```
 
-`Auth::check()` returns `true` if a user has been authenticated on the current request.
+| Method | Description |
+|--------|-------------|
+| `$auth->user()` | The authenticated user object, or `null` |
+| `$auth->check()` | `true` if a user is logged in |
+| `$auth->id()` | The authenticated user's ID |
+| `$auth->guest()` | `true` if no user is logged in |
+| `$auth->login($user, $remember)` | Log a user in; optionally set a 30-day remember-me cookie |
+| `$auth->logout()` | End the session and clear remember-me cookie |
+
+---
+
+## Protecting Routes
+
+Use the built-in `auth` middleware alias (registered by Flint core) to restrict routes to authenticated users:
+
+```php
+$router->group(['middleware' => ['auth']], function ($router) {
+    $router->get('/dashboard',  [DashboardController::class, 'index']);
+    $router->get('/settings',   [SettingsController::class, 'show']);
+    $router->put('/settings',   [SettingsController::class, 'update']);
+});
+```
+
+Unauthenticated visitors are automatically redirected to `/login`.
+
+---
+
+## Mail (Password Reset & Email Verification)
+
+Mail is handled by Flint's built-in mailer. Set your driver in `.env`:
+
+```env
+MAIL_DRIVER=log           # default — writes to storage/logs/mail.log
+MAIL_DRIVER=smtp          # sends real email
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=587
+MAIL_USERNAME=your-username
+MAIL_PASSWORD=your-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=hello@example.com
+MAIL_FROM_NAME="My App"
+```
+
+Email templates are published to `resources/views/emails/` and are plain `.ember` files you can customise freely.
 
 ---
 
 ## Database
 
-`auth:install` publishes two migrations:
+Three tables are created by the scaffolded migrations:
 
 | Table | Purpose |
 |-------|---------|
-| `users` | Stores registered users (`name`, `email`, `password`) |
-| `refresh_tokens` | Tracks active refresh tokens by `jti` for revocation |
+| `users` | Registered users with optional email verification and remember-me support |
+| `password_reset_tokens` | Single-use tokens for password reset (expire after 1 hour) |
+| `email_verifications` | Single-use tokens for email address verification |
+
+---
+
+## Migrating from v1
+
+v1 used JWT Bearer tokens for API authentication. v2 uses server-side sessions.
+
+**Removed:** `JwtMiddleware`, `RefreshMiddleware`, `RefreshToken` model, `auth:install` command, `firebase/php-jwt` dependency, `JWT_SECRET`/`JWT_ALGORITHM` config.
+
+**Replaced with:** Flint core `Session`, `Csrf`, and `Auth` classes — no extra package needed for the auth primitives themselves.
+
+If you need to keep JWT for a pure API application, tag your v1 install and do not upgrade.
 
 ---
 
