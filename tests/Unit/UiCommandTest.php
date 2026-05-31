@@ -107,15 +107,15 @@ class UiCommandTest extends TestCase
         $this->command->handle(['bootstrap', '--auth']);
         ob_end_clean();
 
-        $this->assertFileExists($this->dir . '/resources/views/layouts/app.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/login.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/register.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/forgot-password.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/reset-password.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/verify-email.ember');
-        $this->assertFileExists($this->dir . '/resources/views/auth/dashboard.ember');
-        $this->assertFileExists($this->dir . '/resources/views/emails/reset-password.ember');
-        $this->assertFileExists($this->dir . '/resources/views/emails/verify-email.ember');
+        $this->assertFileExists($this->dir . '/resources/views/layouts/app.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/login.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/register.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/forgot-password.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/reset-password.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/verify-email.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/auth/dashboard.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/emails/reset-password.spark.php');
+        $this->assertFileExists($this->dir . '/resources/views/emails/verify-email.spark.php');
     }
 
     public function test_bootstrap_auth_appends_routes_to_web_php(): void
