@@ -90,7 +90,7 @@ class UiCommand extends Command
     private function publishPreset(string $preset): void
     {
         if ($preset === 'bootstrap') {
-            // Bootstrap uses server-rendered Ember views; no JS build step
+            // Bootstrap uses server-rendered Spark views; no JS build step
             $this->copyStub(
                 "views/bootstrap/resources/css/app.css",
                 "resources/css/app.css"
@@ -191,15 +191,15 @@ class UiCommand extends Command
     {
         if ($preset === 'bootstrap') {
             $views = [
-                'views/bootstrap/layouts/app.ember'           => 'resources/views/layouts/app.ember',
-                'views/bootstrap/auth/login.ember'            => 'resources/views/auth/login.ember',
-                'views/bootstrap/auth/register.ember'         => 'resources/views/auth/register.ember',
-                'views/bootstrap/auth/forgot-password.ember'  => 'resources/views/auth/forgot-password.ember',
-                'views/bootstrap/auth/reset-password.ember'   => 'resources/views/auth/reset-password.ember',
-                'views/bootstrap/auth/verify-email.ember'     => 'resources/views/auth/verify-email.ember',
-                'views/bootstrap/auth/dashboard.ember'        => 'resources/views/auth/dashboard.ember',
-                'views/bootstrap/emails/reset-password.ember' => 'resources/views/emails/reset-password.ember',
-                'views/bootstrap/emails/verify-email.ember'   => 'resources/views/emails/verify-email.ember',
+                'views/bootstrap/layouts/app.spark.php'           => 'resources/views/layouts/app.spark.php',
+                'views/bootstrap/auth/login.spark.php'            => 'resources/views/auth/login.spark.php',
+                'views/bootstrap/auth/register.spark.php'         => 'resources/views/auth/register.spark.php',
+                'views/bootstrap/auth/forgot-password.spark.php'  => 'resources/views/auth/forgot-password.spark.php',
+                'views/bootstrap/auth/reset-password.spark.php'   => 'resources/views/auth/reset-password.spark.php',
+                'views/bootstrap/auth/verify-email.spark.php'     => 'resources/views/auth/verify-email.spark.php',
+                'views/bootstrap/auth/dashboard.spark.php'        => 'resources/views/auth/dashboard.spark.php',
+                'views/bootstrap/emails/reset-password.spark.php' => 'resources/views/emails/reset-password.spark.php',
+                'views/bootstrap/emails/verify-email.spark.php'   => 'resources/views/emails/verify-email.spark.php',
             ];
 
             foreach ($views as $stub => $dest) {

@@ -27,7 +27,7 @@ Register the package in `config/app.php`:
 Pick a frontend preset and add `--auth` to scaffold all authentication pages:
 
 ```bash
-# Bootstrap 5 — server-rendered Ember templates
+# Bootstrap 5 — server-rendered Spark templates
 php flint ui bootstrap --auth
 
 # Vue 3 + Vite — SPA with JSON API backend
@@ -93,7 +93,7 @@ Running `php flint ui <preset> --auth` publishes the following into your applica
 
 ### Bootstrap
 
-Server-rendered HTML using Flint's **Ember** template engine (`.ember` files). Bootstrap 5 is loaded from CDN — no build step required.
+Server-rendered HTML using Flint's **Spark** template engine (`.spark.php` files). Bootstrap 5 is loaded from CDN — no build step required.
 
 Controllers are published to `app/Controllers/Auth/` and use `Response::view()`, `Response::back()`, and session flash for form repopulation.
 
@@ -194,7 +194,7 @@ MAIL_FROM_ADDRESS=hello@example.com
 MAIL_FROM_NAME="My App"
 ```
 
-Email templates are published to `resources/views/emails/` and are plain `.ember` files you can customise freely.
+Email templates are published to `resources/views/emails/` and are plain `.spark.php` files you can customise freely.
 
 ---
 
